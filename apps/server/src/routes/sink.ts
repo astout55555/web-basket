@@ -1,16 +1,18 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import fastifyStatic from '@fastify/static';
-import { basketAddressSchema } from '@web-basket/shared';
+import { basketAddressSchema, SSE_EVENT_REQUEST } from '@web-basket/shared';
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import type sql from 'mssql';
 import type { AppConfig } from '../config';
 import { findBasketByAddress } from '../db/baskets-repo';
-import { insertRequest } from '../db/requests-repo';
+import { insertRequest, toRequestRecord } from '../db/requests-repo';
+import type { SseRegistry } from '../sse/registry';
 
 export interface SinkRoutesOpts {
   pool: sql.ConnectionPool;
   config: AppConfig;
+  registry: SseRegistry;
 }
 
 /** What the catch-all content-type parser hands the handler as req.body. */
@@ -28,7 +30,10 @@ interface CapturedBody {
  * over the parametric /:address. Steps 3–5 (sink → SPA fallback → 404) are
  * decided here, because only the database knows whether :address exists.
  */
-export const sinkRoutes: FastifyPluginAsync<SinkRoutesOpts> = async (app, { pool, config }) => {
+export const sinkRoutes: FastifyPluginAsync<SinkRoutesOpts> = async (
+  app,
+  { pool, config, registry },
+) => {
   const webDistDir = path.resolve(config.webDistDir);
   const hasWebDist = existsSync(path.join(webDistDir, 'index.html'));
   if (hasWebDist) {
@@ -95,8 +100,7 @@ export const sinkRoutes: FastifyPluginAsync<SinkRoutesOpts> = async (app, { pool
           if (value !== undefined) headers[name] = value;
         }
 
-        // Chunk 6 captures the return value here to fan it out over SSE.
-        await insertRequest(pool, {
+        const stored = await insertRequest(pool, {
           basketId: basket.id,
           method: req.method,
           path: pathOnly,
@@ -109,6 +113,9 @@ export const sinkRoutes: FastifyPluginAsync<SinkRoutesOpts> = async (app, { pool
           remoteIp: req.ip ?? null,
           requestCap: config.basketRequestCap,
         });
+
+        // DB write is durable; now push the record to live dashboards.
+        registry.broadcast(address, SSE_EVENT_REQUEST, toRequestRecord(stored));
 
         return reply.code(204).send();
       }

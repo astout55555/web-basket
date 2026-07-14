@@ -17,7 +17,7 @@ export interface ApiRoutesOpts {
   config: AppConfig;
 }
 
-const addressParams = z.object({ address: basketAddressSchema });
+export const addressParams = z.object({ address: basketAddressSchema });
 
 /**
  * The JSON API. Registered under the /api prefix; the rate limiter is

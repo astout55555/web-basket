@@ -9,6 +9,15 @@ import type sql from 'mssql';
 import type { AppConfig } from './config';
 import { apiRoutes } from './routes/api';
 import { sinkRoutes } from './routes/sink';
+import { sseRoutes } from './routes/sse';
+import { SseRegistry } from './sse/registry';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    /** Exposed for shutdown hooks and tests; routes receive it via opts. */
+    sseRegistry: SseRegistry;
+  }
+}
 
 export interface AppDeps {
   config: AppConfig;
@@ -40,8 +49,12 @@ export function buildApp(deps: AppDeps, fastifyOpts: FastifyServerOptions = {}) 
 
   app.get('/healthz', async () => ({ status: 'ok' }));
 
+  const registry = new SseRegistry();
+  app.decorate('sseRegistry', registry);
+
   app.register(apiRoutes, { prefix: '/api', pool: deps.pool, config: deps.config });
-  app.register(sinkRoutes, { pool: deps.pool, config: deps.config });
+  app.register(sseRoutes, { prefix: '/api', pool: deps.pool, registry });
+  app.register(sinkRoutes, { pool: deps.pool, config: deps.config, registry });
 
   return app;
 }
