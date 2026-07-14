@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "AZURE_SQL_TRUST_SERVER_CERT=true tsx watch src/server.ts",
     "build": "tsup",
     "start": "node dist/server.js",
     "db:migrate": "tsx src/db/migrate-cli.ts --ensure-db",
@@ -12,9 +12,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fastify/rate-limit": "^11.1.0",
     "@web-basket/shared": "workspace:*",
     "fastify": "^5.10.0",
-    "mssql": "^12.7.0"
+    "fastify-type-provider-zod": "^7.0.0",
+    "mssql": "^12.7.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/mssql": "^12.3.0",

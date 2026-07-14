@@ -46,5 +46,13 @@ export const listRequestsResponseSchema = z.object({
 });
 export type ListRequestsResponse = z.infer<typeof listRequestsResponseSchema>;
 
+/** Error body shape for API 4xx/5xx responses (Fastify's convention). */
+export const apiErrorSchema = z.object({
+  statusCode: z.number().int(),
+  error: z.string(),
+  message: z.string(),
+});
+export type ApiError = z.infer<typeof apiErrorSchema>;
+
 /** SSE event name used for the live request stream. */
 export const SSE_EVENT_REQUEST = 'request';
