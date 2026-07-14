@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { CopyButton } from '../components/CopyButton';
 import { createBasket } from '../lib/api';
 import type { SavedBasket } from '../lib/baskets-store';
 import { loadBaskets, saveBasket } from '../lib/baskets-store';
@@ -70,21 +71,5 @@ export function Home() {
         </ul>
       )}
     </section>
-  );
-}
-
-export function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function onCopy() {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }
-
-  return (
-    <button className="ghost" onClick={onCopy}>
-      {copied ? 'Copied!' : 'Copy'}
-    </button>
   );
 }

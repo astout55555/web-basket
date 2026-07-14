@@ -4,9 +4,12 @@ import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../App';
 import { loadBaskets, saveBasket } from '../lib/baskets-store';
+import { installFakeEventSource } from '../test/fake-event-source';
 
 vi.mock('../lib/api', () => ({
   createBasket: vi.fn(),
+  deleteBasket: vi.fn(),
+  fetchRequests: vi.fn(),
 }));
 import { createBasket } from '../lib/api';
 
@@ -22,6 +25,9 @@ function renderHome() {
 
 beforeEach(() => {
   localStorage.clear();
+  // Creating a basket navigates to the real BasketPage, which opens a
+  // (faked — jsdom has none) EventSource.
+  installFakeEventSource();
   vi.mocked(createBasket).mockReset();
 });
 
@@ -46,7 +52,7 @@ describe('Home', () => {
     await user.click(screen.getByRole('button', { name: /create basket/i }));
 
     expect(
-      await screen.findByText(new RegExp(`dashboard.*${A1}|${A1}.*dashboard`, 'i')),
+      await screen.findByRole('heading', { name: new RegExp(`basket ${A1}`, 'i') }),
     ).toBeInTheDocument();
     expect(loadBaskets().map((b) => b.address)).toEqual([A1]);
   });
