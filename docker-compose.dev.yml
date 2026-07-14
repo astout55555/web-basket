@@ -1,0 +1,42 @@
+# Local development only: a SQL Server container so dev/tests hit the same
+# engine family as production (Azure SQL). Prod uses the managed service —
+# see docker-compose.yml (chunk 11).
+#
+# Start:  docker compose -f docker-compose.dev.yml up -d --wait
+# Stop:   docker compose -f docker-compose.dev.yml down          (keeps data)
+# Reset:  docker compose -f docker-compose.dev.yml down -v       (wipes data)
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: 'Y'
+      # Dev-only credentials; nothing sensitive. SQL Server enforces password
+      # complexity (8+ chars, 3 of 4 character classes) even for dev.
+      MSSQL_SA_PASSWORD: 'LocalDev1!Passw0rd'
+      MSSQL_PID: Developer
+    ports:
+      - '1433:1433'
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          'CMD',
+          '/opt/mssql-tools18/bin/sqlcmd',
+          '-S',
+          'localhost',
+          '-U',
+          'sa',
+          '-P',
+          'LocalDev1!Passw0rd',
+          '-C',
+          '-Q',
+          'SELECT 1',
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+volumes:
+  mssql-data:

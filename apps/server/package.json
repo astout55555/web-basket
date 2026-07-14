@@ -7,13 +7,17 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsup",
     "start": "node dist/server.js",
+    "db:migrate": "tsx src/db/migrate-cli.ts --ensure-db",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "fastify": "^5.10.0"
+    "@web-basket/shared": "workspace:*",
+    "fastify": "^5.10.0",
+    "mssql": "^12.7.0"
   },
   "devDependencies": {
+    "@types/mssql": "^12.3.0",
     "@types/node": "^26.1.1",
     "tsup": "^8.5.1",
     "tsx": "^4.23.1",
