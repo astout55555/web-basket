@@ -8,10 +8,10 @@ A request bin / webhook inspector: create a basket, point any HTTP request at it
 
 - **Create a basket** and you get an unguessable URL like `https://<domain>/aB3xK9mQp2Zt`.
 - **Send anything at it**: any method, sub-path, query string, or content type (malformed JSON and binary bodies included). The sink records the request and returns `204`.
-- **Watch it live**: the dashboard at `/b/<address>` streams new requests over Server-Sent Events instead of polling.
+- **Watch it live**: the dashboard at `/b/<address>` streams new requests over Server-Sent Events.
 - **Inspect and reuse**: pretty-printed JSON bodies, expandable headers, copy-as-cURL for replaying a request against your real endpoint, and download-as-JSON.
 
-No accounts. The basket URL is the only credential (a 12-character base62 token from a CSPRNG, about 71 bits of entropy), your browser's `localStorage` remembers the baskets you created, and idle baskets expire after 7 days.
+The basket URL is the only credential (a 12-character base62 token from a CSPRNG, about 71 bits of entropy), your browser's `localStorage` remembers the baskets you created, and idle baskets expire after 7 days.
 
 ## Architecture
 
@@ -97,5 +97,6 @@ Production is a single Azure **B1ms** VM running two containers, Caddy (automati
 ## Limitations & future work
 
 - **Single instance by design.** SSE fan-out and rate-limit counters are in-memory; scaling out would move both behind Redis (pub/sub plus a shared store).
+- **No volumetric defense.** The sink is deliberately unthrottled — webhook bursts are legitimate traffic and shared sender IPs make per-IP limits misfire — so a sustained flood can saturate the single VM. The caps bound storage and cost, not request rate; a production deployment would put an edge proxy or WAF with rate limiting in front.
 - **Bodies live in the database**, capped at 256 KB. Raising the cap would mean moving bodies to Azure Blob Storage with a pointer in the row.
 - Azure Key Vault for secrets, request replay from the UI, custom sink responses, search/filter, and the native `json` column type are all future work.
