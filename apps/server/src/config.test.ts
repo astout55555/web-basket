@@ -30,6 +30,11 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ BASKET_TTL_DAYS: '-1' })).toThrow();
   });
 
+  it('exposes a DB connect timeout for Azure SQL auto-pause resume', () => {
+    expect(loadConfig({}).db.connectTimeoutMs).toBe(15_000);
+    expect(loadConfig({ AZURE_SQL_CONNECT_TIMEOUT_MS: '60000' }).db.connectTimeoutMs).toBe(60_000);
+  });
+
   it('defaults trustProxy to false; prod (behind Caddy) opts in', () => {
     expect(loadConfig({}).trustProxy).toBe(false);
     expect(loadConfig({ TRUST_PROXY: 'true' }).trustProxy).toBe(true);

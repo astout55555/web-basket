@@ -8,6 +8,7 @@ export interface DbConfig {
   password: string;
   encrypt: boolean;
   trustServerCertificate: boolean;
+  connectTimeoutMs: number;
 }
 
 /**
@@ -25,6 +26,7 @@ export function devDbConfig(): DbConfig {
     password: process.env.AZURE_SQL_PASSWORD ?? 'LocalDev1!Passw0rd',
     encrypt: true,
     trustServerCertificate: (process.env.AZURE_SQL_TRUST_SERVER_CERT ?? 'true') === 'true',
+    connectTimeoutMs: Number(process.env.AZURE_SQL_CONNECT_TIMEOUT_MS ?? 15_000),
   };
 }
 
@@ -37,6 +39,7 @@ export async function connectPool(config: DbConfig): Promise<sql.ConnectionPool>
     user: config.user,
     password: config.password,
     pool: { max: 10, min: 0 },
+    connectionTimeout: config.connectTimeoutMs,
     options: {
       encrypt: config.encrypt,
       trustServerCertificate: config.trustServerCertificate,

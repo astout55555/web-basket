@@ -31,6 +31,9 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  // Azure SQL serverless auto-pauses when idle; resuming can take ~30-60s,
+  // longer than the driver's 15s default. Prod sets this higher.
+  AZURE_SQL_CONNECT_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
 });
 
 export interface AppConfig {
@@ -62,6 +65,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       password: parsed.AZURE_SQL_PASSWORD,
       encrypt: true,
       trustServerCertificate: parsed.AZURE_SQL_TRUST_SERVER_CERT,
+      connectTimeoutMs: parsed.AZURE_SQL_CONNECT_TIMEOUT_MS,
     },
   };
 }
