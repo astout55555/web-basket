@@ -1,0 +1,13 @@
+# Keep the build context small and the image honest: dependencies are
+# installed and artifacts built INSIDE the image, never copied from the host.
+node_modules
+**/node_modules
+**/dist
+docs
+.git
+.env
+e2e
+playwright-report
+test-results
+docker-compose*.yml
+Caddyfile

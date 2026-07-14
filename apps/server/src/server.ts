@@ -12,7 +12,7 @@ const pool = await connectPool(config.db);
 const migrationsDir = fileURLToPath(new URL('../migrations', import.meta.url));
 const applied = await runMigrations(pool, migrationsDir);
 
-const app = buildApp({ config, pool }, { logger: true });
+const app = buildApp({ config, pool }, { logger: true, trustProxy: config.trustProxy });
 if (applied.length > 0) {
   app.log.info({ applied }, 'migrations applied');
 }

@@ -1,0 +1,45 @@
+# Production topology (Azure VM): Caddy terminates TLS and proxies to the
+# app; the database is managed Azure SQL, reached over the network — no DB
+# container here (that's docker-compose.dev.yml, local only).
+services:
+  app:
+    build: .
+    image: web-basket-app
+    restart: unless-stopped
+    env_file: .env
+    # No ports: — only Caddy is reachable from outside; the app is only on
+    # the compose-internal network.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/healthz').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp' # HTTP/3
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates live here — losing this volume on restart would re-issue
+      # certs and eventually trip Let's Encrypt rate limits.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+volumes:
+  caddy-data:
+  caddy-config:

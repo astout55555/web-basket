@@ -5,7 +5,6 @@ describe('loadConfig', () => {
   it('applies dev-friendly defaults when env is empty', () => {
     const config = loadConfig({});
     expect(config.port).toBe(3000);
-    expect(config.publicBaseUrl).toBe('http://localhost:3000');
     expect(config.bodyMaxBytes).toBe(262_144);
     expect(config.basketRequestCap).toBe(200);
     expect(config.basketTtlDays).toBe(7);
@@ -31,7 +30,8 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ BASKET_TTL_DAYS: '-1' })).toThrow();
   });
 
-  it('rejects a malformed PUBLIC_BASE_URL', () => {
-    expect(() => loadConfig({ PUBLIC_BASE_URL: 'not a url' })).toThrow();
+  it('defaults trustProxy to false; prod (behind Caddy) opts in', () => {
+    expect(loadConfig({}).trustProxy).toBe(false);
+    expect(loadConfig({ TRUST_PROXY: 'true' }).trustProxy).toBe(true);
   });
 });

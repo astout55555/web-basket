@@ -1,0 +1,10 @@
+# {$DOMAIN} comes from the caddy service's environment (.env on the VM).
+# A domain in the site address is all Caddy needs to fetch and renew
+# Let's Encrypt certificates automatically.
+{$DOMAIN} {
+	# flush_interval -1 disables response buffering, which SSE requires:
+	# each event: frame must reach the browser the moment it is written.
+	reverse_proxy app:3000 {
+		flush_interval -1
+	}
+}

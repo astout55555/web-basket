@@ -37,6 +37,9 @@ beforeAll(async () => {
     ...loadConfig({}),
     db: { ...devDbConfig(), database: TEST_DB },
     webDistDir: FIXTURE_DIST,
+    // This suite creates a basket per test; don't trip the creation limit
+    // (rate limiting has its own dedicated test in the API suite).
+    basketCreatePerMinute: 1000,
   };
   app = buildApp({ config, pool });
   await app.ready();
@@ -220,5 +223,36 @@ describe('routing precedence (spec §7.3)', () => {
     const address = await createBasket();
     await app.inject({ method: 'GET', url: '/zzzzzzzzzzzz' });
     expect(await fetchRecords(address)).toHaveLength(0);
+  });
+});
+
+describe('remoteIp behind a reverse proxy', () => {
+  it('uses X-Forwarded-For only when trustProxy is enabled', async () => {
+    const proxied = buildApp({ config, pool }, { trustProxy: true });
+    await proxied.ready();
+    try {
+      const address = await createBasket();
+
+      // Untrusted (default app): the header is attacker-settable, ignore it.
+      await app.inject({
+        method: 'POST',
+        url: `/${address}`,
+        headers: { 'x-forwarded-for': '198.51.100.7' },
+        payload: 'a',
+      });
+      // Trusted (behind Caddy): the header is what Caddy wrote — use it.
+      await proxied.inject({
+        method: 'POST',
+        url: `/${address}`,
+        headers: { 'x-forwarded-for': '198.51.100.7' },
+        payload: 'b',
+      });
+
+      const [viaProxy, direct] = await fetchRecords(address);
+      expect(direct!.remoteIp).toBe('127.0.0.1');
+      expect(viaProxy!.remoteIp).toBe('198.51.100.7');
+    } finally {
+      await proxied.close();
+    }
   });
 });

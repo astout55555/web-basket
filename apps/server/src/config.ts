@@ -9,13 +9,19 @@ import type { DbConfig } from './db/pool';
  */
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
-  PUBLIC_BASE_URL: z.url().default('http://localhost:3000'),
   BODY_MAX_BYTES: z.coerce.number().int().positive().default(262_144),
   BASKET_REQUEST_CAP: z.coerce.number().int().positive().default(200),
   BASKET_TTL_DAYS: z.coerce.number().int().positive().default(7),
   BASKET_CREATE_PER_MINUTE: z.coerce.number().int().positive().default(10),
   // Where the built SPA lives; relative paths resolve from the server's cwd.
   WEB_DIST_DIR: z.string().default('../web/dist'),
+  // Behind a reverse proxy (Caddy in prod), req.ip must come from
+  // X-Forwarded-For. Off by default: that header is attacker-settable when
+  // clients reach the app directly.
+  TRUST_PROXY: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   AZURE_SQL_SERVER: z.string().default('localhost'),
   AZURE_SQL_PORT: z.coerce.number().int().positive().default(1433),
   AZURE_SQL_DATABASE: z.string().default('webbasket'),
@@ -29,12 +35,12 @@ const envSchema = z.object({
 
 export interface AppConfig {
   port: number;
-  publicBaseUrl: string;
   bodyMaxBytes: number;
   basketRequestCap: number;
   basketTtlDays: number;
   basketCreatePerMinute: number;
   webDistDir: string;
+  trustProxy: boolean;
   db: DbConfig;
 }
 
@@ -42,12 +48,12 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   const parsed = envSchema.parse(env);
   return {
     port: parsed.PORT,
-    publicBaseUrl: parsed.PUBLIC_BASE_URL,
     bodyMaxBytes: parsed.BODY_MAX_BYTES,
     basketRequestCap: parsed.BASKET_REQUEST_CAP,
     basketTtlDays: parsed.BASKET_TTL_DAYS,
     basketCreatePerMinute: parsed.BASKET_CREATE_PER_MINUTE,
     webDistDir: parsed.WEB_DIST_DIR,
+    trustProxy: parsed.TRUST_PROXY,
     db: {
       server: parsed.AZURE_SQL_SERVER,
       port: parsed.AZURE_SQL_PORT,
