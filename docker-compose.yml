@@ -4,7 +4,10 @@
 services:
   app:
     build: .
-    image: web-basket-app
+    # Local runs build and tag web-basket-app; on the VM, .env sets
+    # APP_IMAGE=ghcr.io/<owner>/web-basket-app:latest so `compose pull`
+    # fetches what CI pushed instead of building on the VM.
+    image: ${APP_IMAGE:-web-basket-app}
     restart: unless-stopped
     env_file: .env
     # No ports: — only Caddy is reachable from outside; the app is only on
