@@ -3,6 +3,7 @@ import { buildApp } from './app';
 import { loadConfig } from './config';
 import { runMigrations } from './db/migrate';
 import { connectPool } from './db/pool';
+import { startRetentionSweep } from './retention';
 
 const config = loadConfig();
 const pool = await connectPool(config.db);
@@ -24,9 +25,16 @@ try {
   process.exit(1);
 }
 
+const stopRetention = startRetentionSweep({
+  pool,
+  ttlDays: config.basketTtlDays,
+  log: app.log,
+});
+
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, async () => {
     app.log.info({ signal }, 'shutting down');
+    stopRetention();
     await app.close();
     await pool.close();
     process.exit(0);
