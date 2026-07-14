@@ -14,6 +14,8 @@ const envSchema = z.object({
   BASKET_REQUEST_CAP: z.coerce.number().int().positive().default(200),
   BASKET_TTL_DAYS: z.coerce.number().int().positive().default(7),
   BASKET_CREATE_PER_MINUTE: z.coerce.number().int().positive().default(10),
+  // Where the built SPA lives; relative paths resolve from the server's cwd.
+  WEB_DIST_DIR: z.string().default('../web/dist'),
   AZURE_SQL_SERVER: z.string().default('localhost'),
   AZURE_SQL_PORT: z.coerce.number().int().positive().default(1433),
   AZURE_SQL_DATABASE: z.string().default('webbasket'),
@@ -32,6 +34,7 @@ export interface AppConfig {
   basketRequestCap: number;
   basketTtlDays: number;
   basketCreatePerMinute: number;
+  webDistDir: string;
   db: DbConfig;
 }
 
@@ -44,6 +47,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     basketRequestCap: parsed.BASKET_REQUEST_CAP,
     basketTtlDays: parsed.BASKET_TTL_DAYS,
     basketCreatePerMinute: parsed.BASKET_CREATE_PER_MINUTE,
+    webDistDir: parsed.WEB_DIST_DIR,
     db: {
       server: parsed.AZURE_SQL_SERVER,
       port: parsed.AZURE_SQL_PORT,

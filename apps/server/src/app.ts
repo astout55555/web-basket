@@ -8,6 +8,7 @@ import {
 import type sql from 'mssql';
 import type { AppConfig } from './config';
 import { apiRoutes } from './routes/api';
+import { sinkRoutes } from './routes/sink';
 
 export interface AppDeps {
   config: AppConfig;
@@ -40,6 +41,7 @@ export function buildApp(deps: AppDeps, fastifyOpts: FastifyServerOptions = {}) 
   app.get('/healthz', async () => ({ status: 'ok' }));
 
   app.register(apiRoutes, { prefix: '/api', pool: deps.pool, config: deps.config });
+  app.register(sinkRoutes, { pool: deps.pool, config: deps.config });
 
   return app;
 }

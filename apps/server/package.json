@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@fastify/rate-limit": "^11.1.0",
+    "@fastify/static": "^10.1.0",
     "@web-basket/shared": "workspace:*",
     "fastify": "^5.10.0",
     "fastify-type-provider-zod": "^7.0.0",
