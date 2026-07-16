@@ -4,34 +4,19 @@
  */
 import { requestRecordSchema } from '@web-basket/shared';
 import type sql from 'mssql';
-import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../app';
-import { loadConfig } from '../config';
-import { runMigrations } from '../db/migrate';
-import { connectPool, devDbConfig } from '../db/pool';
+import { setupTestDb, testAppConfig } from '../test/db';
 
 const TEST_DB = 'webbasket_sse_test';
-const MIGRATIONS_DIR = fileURLToPath(new URL('../../migrations', import.meta.url));
 
 let pool: sql.ConnectionPool;
 let app: ReturnType<typeof buildApp>;
 let baseUrl: string;
 
 beforeAll(async () => {
-  const master = await connectPool({ ...devDbConfig(), database: 'master' });
-  await master
-    .request()
-    .batch(
-      `IF DB_ID('${TEST_DB}') IS NOT NULL BEGIN ALTER DATABASE [${TEST_DB}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [${TEST_DB}]; END; CREATE DATABASE [${TEST_DB}];`,
-    );
-  await master.close();
-
-  pool = await connectPool({ ...devDbConfig(), database: TEST_DB });
-  await runMigrations(pool, MIGRATIONS_DIR);
-
-  const config = { ...loadConfig({}), db: { ...devDbConfig(), database: TEST_DB } };
-  app = buildApp({ config, pool });
+  pool = await setupTestDb(TEST_DB);
+  app = buildApp({ config: testAppConfig(TEST_DB), pool });
   await app.listen({ port: 0, host: '127.0.0.1' });
   const addr = app.server.address();
   if (addr === null || typeof addr === 'string') throw new Error('no port');

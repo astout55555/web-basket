@@ -7,9 +7,9 @@
  */
 import { basketAddressSchema, requestRecordSchema } from '@web-basket/shared';
 import sql from 'mssql';
-import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { generateBasketAddress } from '../address';
+import { MIGRATIONS_DIR, setupTestDb } from '../test/db';
 import {
   createBasket,
   deleteBasket,
@@ -17,26 +17,14 @@ import {
   findBasketByAddress,
 } from './baskets-repo';
 import { runMigrations } from './migrate';
-import { connectPool, devDbConfig } from './pool';
 import { insertRequest, listRequests, toRequestRecord } from './requests-repo';
-
-const TEST_DB = 'webbasket_test';
-const MIGRATIONS_DIR = fileURLToPath(new URL('../../migrations', import.meta.url));
 
 let pool: sql.ConnectionPool;
 
 beforeAll(async () => {
-  const master = await connectPool({ ...devDbConfig(), database: 'master' });
-  await master
-    .request()
-    .batch(
-      `IF DB_ID('${TEST_DB}') IS NOT NULL BEGIN ALTER DATABASE [${TEST_DB}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [${TEST_DB}]; END; CREATE DATABASE [${TEST_DB}];`,
-    );
-  await master.close();
-
-  pool = await connectPool({ ...devDbConfig(), database: TEST_DB });
-  const applied = await runMigrations(pool, MIGRATIONS_DIR);
-  expect(applied).toEqual(['001_init.sql']);
+  // setupTestDb runs the migrations; the repo tests below fail immediately if
+  // that didn't happen (no tables), and the idempotency test covers re-runs.
+  pool = await setupTestDb('webbasket_test');
 }, 60_000);
 
 afterAll(async () => {

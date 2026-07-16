@@ -1,26 +1,17 @@
 import type sql from 'mssql';
-import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { devDbConfig } from './config';
 import { createBasket, findBasketByAddress } from './db/baskets-repo';
-import { runMigrations } from './db/migrate';
-import { connectPool, devDbConfig } from './db/pool';
+import { connectPool } from './db/pool';
 import { startRetentionSweep } from './retention';
+import { setupTestDb } from './test/db';
 
 const TEST_DB = 'webbasket_retention_test';
-const MIGRATIONS_DIR = fileURLToPath(new URL('../migrations', import.meta.url));
 
 let pool: sql.ConnectionPool;
 
 beforeAll(async () => {
-  const master = await connectPool({ ...devDbConfig(), database: 'master' });
-  await master
-    .request()
-    .batch(
-      `IF DB_ID('${TEST_DB}') IS NOT NULL BEGIN ALTER DATABASE [${TEST_DB}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [${TEST_DB}]; END; CREATE DATABASE [${TEST_DB}];`,
-    );
-  await master.close();
-  pool = await connectPool({ ...devDbConfig(), database: TEST_DB });
-  await runMigrations(pool, MIGRATIONS_DIR);
+  pool = await setupTestDb(TEST_DB);
 }, 60_000);
 
 afterAll(async () => {

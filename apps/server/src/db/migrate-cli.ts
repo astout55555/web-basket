@@ -5,8 +5,9 @@
  * convenience; Azure SQL databases are provisioned, not created by the app).
  */
 import { fileURLToPath } from 'node:url';
+import { devDbConfig } from '../config';
 import { runMigrations } from './migrate';
-import { connectPool, devDbConfig } from './pool';
+import { connectPool } from './pool';
 
 // fileURLToPath (not .pathname) so paths with spaces or non-ASCII characters,
 // and Windows drive letters, resolve correctly.

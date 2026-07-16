@@ -9,12 +9,9 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../app';
 import type { AppConfig } from '../config';
-import { loadConfig } from '../config';
-import { runMigrations } from '../db/migrate';
-import { connectPool, devDbConfig } from '../db/pool';
+import { setupTestDb, testAppConfig } from '../test/db';
 
 const TEST_DB = 'webbasket_sink_test';
-const MIGRATIONS_DIR = fileURLToPath(new URL('../../migrations', import.meta.url));
 const FIXTURE_DIST = fileURLToPath(new URL('../../test-fixtures/web-dist', import.meta.url));
 
 let pool: sql.ConnectionPool;
@@ -22,25 +19,13 @@ let config: AppConfig;
 let app: ReturnType<typeof buildApp>;
 
 beforeAll(async () => {
-  const master = await connectPool({ ...devDbConfig(), database: 'master' });
-  await master
-    .request()
-    .batch(
-      `IF DB_ID('${TEST_DB}') IS NOT NULL BEGIN ALTER DATABASE [${TEST_DB}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [${TEST_DB}]; END; CREATE DATABASE [${TEST_DB}];`,
-    );
-  await master.close();
-
-  pool = await connectPool({ ...devDbConfig(), database: TEST_DB });
-  await runMigrations(pool, MIGRATIONS_DIR);
-
-  config = {
-    ...loadConfig({}),
-    db: { ...devDbConfig(), database: TEST_DB },
+  pool = await setupTestDb(TEST_DB);
+  config = testAppConfig(TEST_DB, {
     webDistDir: FIXTURE_DIST,
     // This suite creates a basket per test; don't trip the creation limit
     // (rate limiting has its own dedicated test in the API suite).
     basketCreatePerMinute: 1000,
-  };
+  });
   app = buildApp({ config, pool });
   await app.ready();
 }, 60_000);

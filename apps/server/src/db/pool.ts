@@ -11,25 +11,6 @@ export interface DbConfig {
   connectTimeoutMs: number;
 }
 
-/**
- * Dev-container defaults (docker-compose.dev.yml), overridable via the same
- * env vars production uses. Production config is parsed strictly in
- * config.ts (chunk 4) — this helper is for local dev and tests only, which is
- * why trusting the server's self-signed certificate is the default here.
- */
-export function devDbConfig(): DbConfig {
-  return {
-    server: process.env.AZURE_SQL_SERVER ?? 'localhost',
-    port: Number(process.env.AZURE_SQL_PORT ?? 1433),
-    database: process.env.AZURE_SQL_DATABASE ?? 'webbasket',
-    user: process.env.AZURE_SQL_USER ?? 'sa',
-    password: process.env.AZURE_SQL_PASSWORD ?? 'LocalDev1!Passw0rd',
-    encrypt: true,
-    trustServerCertificate: (process.env.AZURE_SQL_TRUST_SERVER_CERT ?? 'true') === 'true',
-    connectTimeoutMs: Number(process.env.AZURE_SQL_CONNECT_TIMEOUT_MS ?? 15_000),
-  };
-}
-
 /** Open a connection pool. Callers own the pool and must close() it. */
 export async function connectPool(config: DbConfig): Promise<sql.ConnectionPool> {
   const pool = new sql.ConnectionPool({

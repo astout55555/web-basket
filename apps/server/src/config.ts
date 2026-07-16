@@ -69,3 +69,14 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     },
   };
 }
+
+/**
+ * DB config for local dev and tests: the same loadConfig parser, with the one
+ * dev-only default flipped (trust the container's self-signed certificate).
+ * process.env still overrides, so CI can point elsewhere. Deriving this from
+ * loadConfig keeps dev/test and prod on ONE parser — a new AZURE_SQL_* var
+ * can't silently diverge between them.
+ */
+export function devDbConfig(): DbConfig {
+  return loadConfig({ AZURE_SQL_TRUST_SERVER_CERT: 'true', ...process.env }).db;
+}
