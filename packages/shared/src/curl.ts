@@ -2,7 +2,10 @@ import { base64ToBytes, tryDecodeUtf8 } from './encoding';
 import type { RequestRecord } from './schemas';
 
 /** The subset of a RequestRecord the cURL builder needs. */
-export type CurlInput = Pick<RequestRecord, 'method' | 'path' | 'query' | 'headers' | 'bodyBase64'>;
+export type CurlInput = Pick<
+  RequestRecord,
+  'method' | 'path' | 'query' | 'headers' | 'bodyBase64' | 'truncated'
+>;
 
 /**
  * Headers curl (or the transport) computes itself, or that only made sense on
@@ -67,6 +70,10 @@ export function buildCurlCommand(input: CurlInput, baseUrl: string): string {
     // --data-raw, not -d: -d treats a leading @ as "read this file", which a
     // malicious recorded body could exploit on replay.
     parts.push(`--data-raw ${shellQuote(bodyText)}`);
+    if (input.truncated) {
+      // The stored body was capped, so this replay payload is incomplete.
+      parts.push('# body truncated at capture; payload above is incomplete');
+    }
   }
   if (hasBinaryBody) {
     parts.push('# binary body omitted');

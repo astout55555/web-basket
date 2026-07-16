@@ -1,5 +1,6 @@
 import type sql from 'mssql';
 import { deleteExpiredBaskets } from './db/baskets-repo';
+import type { SseRegistry } from './sse/registry';
 
 /** Structural subset of pino's logger — keeps tests free of pino fakes. */
 export interface RetentionLogger {
@@ -13,6 +14,8 @@ export interface RetentionOpts {
   /** Sweep cadence; defaults to hourly (spec §9). */
   intervalMs?: number;
   log: RetentionLogger;
+  /** Optional: close live dashboards on baskets the sweep expires. */
+  registry?: SseRegistry;
 }
 
 /**
@@ -30,8 +33,12 @@ export function startRetentionSweep(opts: RetentionOpts): () => void {
   const sweep = async () => {
     try {
       const deleted = await deleteExpiredBaskets(opts.pool, opts.ttlDays);
-      if (deleted > 0) {
-        opts.log.info({ deleted, ttlDays: opts.ttlDays }, 'expired baskets removed');
+      if (deleted.length > 0) {
+        for (const address of deleted) opts.registry?.closeAddress(address);
+        opts.log.info(
+          { deleted: deleted.length, ttlDays: opts.ttlDays },
+          'expired baskets removed',
+        );
       }
     } catch (err) {
       opts.log.error({ err }, 'retention sweep failed; will retry next interval');

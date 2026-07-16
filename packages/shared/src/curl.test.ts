@@ -10,6 +10,7 @@ function input(overrides: Partial<Parameters<typeof buildCurlCommand>[0]> = {}) 
     query: null,
     headers: {},
     bodyBase64: null,
+    truncated: false,
     ...overrides,
   };
 }
@@ -111,5 +112,14 @@ describe('buildCurlCommand', () => {
     const cmd = buildCurlCommand(input({ method: 'HEAD' }), BASE);
     expect(cmd).toContain('-I');
     expect(cmd).not.toContain('-X HEAD');
+  });
+
+  it('warns when the stored body was truncated', () => {
+    const cmd = buildCurlCommand(
+      input({ method: 'POST', bodyBase64: b64('partial'), truncated: true }),
+      BASE,
+    );
+    expect(cmd).toContain(`--data-raw 'partial'`);
+    expect(cmd).toContain('# body truncated');
   });
 });

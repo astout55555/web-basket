@@ -153,4 +153,24 @@ describe('GET /api/baskets/:address/stream', () => {
     }
     expect(app.sseRegistry.connectionCount(address)).toBe(0);
   });
+
+  it('closes the stream when the basket is deleted', async () => {
+    const address = await createBasket();
+    const ac = new AbortController();
+    try {
+      const stream = await openStream(address, ac.signal);
+      await stream.waitFor(': connected');
+      expect(app.sseRegistry.connectionCount(address)).toBe(1);
+
+      const res = await fetch(`${baseUrl}/api/baskets/${address}`, { method: 'DELETE' });
+      expect(res.status).toBe(204);
+
+      // The registry drops the connection immediately (closeAddress); the
+      // client's read then ends as the server closes the socket.
+      expect(app.sseRegistry.connectionCount(address)).toBe(0);
+      await expect(stream.waitFor('never arrives', 1000)).rejects.toThrow(/stream ended|timed out/);
+    } finally {
+      ac.abort();
+    }
+  });
 });

@@ -94,7 +94,10 @@ export const sinkRoutes: FastifyPluginAsync<SinkRoutesOpts> = async (
         const pathOnly = (queryStart === -1 ? rawUrl : rawUrl.slice(0, queryStart)).slice(0, 2048);
         const query = queryStart === -1 ? null : rawUrl.slice(queryStart + 1) || null;
 
-        // Node types header values as possibly-undefined; drop those.
+        // Node types header values as possibly-undefined; drop those. (A
+        // header literally named "__proto__" is normalized away downstream by
+        // zod's z.record, which strips it as a prototype-pollution guard —
+        // accepted; surfacing it would mean defeating that guard.)
         const headers: Record<string, string | string[]> = {};
         for (const [name, value] of Object.entries(req.headers)) {
           if (value !== undefined) headers[name] = value;

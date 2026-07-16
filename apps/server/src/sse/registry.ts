@@ -63,6 +63,24 @@ export class SseRegistry {
     return delivered;
   }
 
+  /**
+   * End and forget every connection for one address. Called when a basket is
+   * deleted or expires, so its live dashboards see the stream close (and, on
+   * reconnect, a 404) instead of staying "live" against a basket that's gone.
+   */
+  closeAddress(address: string): void {
+    const set = this.byAddress.get(address);
+    if (!set) return;
+    for (const conn of set) {
+      try {
+        conn.end();
+      } catch {
+        // already dead — nothing to do
+      }
+    }
+    this.byAddress.delete(address);
+  }
+
   /** End every connection (server shutdown) and forget them all. */
   closeAll(): void {
     for (const set of this.byAddress.values()) {

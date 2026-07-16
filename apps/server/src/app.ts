@@ -52,7 +52,7 @@ export function buildApp(deps: AppDeps, fastifyOpts: FastifyServerOptions = {}) 
   const registry = new SseRegistry();
   app.decorate('sseRegistry', registry);
 
-  app.register(apiRoutes, { prefix: '/api', pool: deps.pool, config: deps.config });
+  app.register(apiRoutes, { prefix: '/api', pool: deps.pool, config: deps.config, registry });
   app.register(sseRoutes, { prefix: '/api', pool: deps.pool, registry });
   app.register(sinkRoutes, { pool: deps.pool, config: deps.config, registry });
 

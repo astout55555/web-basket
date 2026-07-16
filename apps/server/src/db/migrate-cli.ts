@@ -4,10 +4,13 @@
  * --ensure-db creates the database first if it is missing (local dev
  * convenience; Azure SQL databases are provisioned, not created by the app).
  */
+import { fileURLToPath } from 'node:url';
 import { runMigrations } from './migrate';
 import { connectPool, devDbConfig } from './pool';
 
-const migrationsDir = new URL('../../migrations', import.meta.url).pathname;
+// fileURLToPath (not .pathname) so paths with spaces or non-ASCII characters,
+// and Windows drive letters, resolve correctly.
+const migrationsDir = fileURLToPath(new URL('../../migrations', import.meta.url));
 const config = devDbConfig();
 
 if (process.argv.includes('--ensure-db')) {

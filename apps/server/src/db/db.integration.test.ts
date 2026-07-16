@@ -7,6 +7,7 @@
  */
 import { basketAddressSchema, requestRecordSchema } from '@web-basket/shared';
 import sql from 'mssql';
+import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { generateBasketAddress } from '../address';
 import {
@@ -20,7 +21,7 @@ import { connectPool, devDbConfig } from './pool';
 import { insertRequest, listRequests, toRequestRecord } from './requests-repo';
 
 const TEST_DB = 'webbasket_test';
-const MIGRATIONS_DIR = new URL('../../migrations', import.meta.url).pathname;
+const MIGRATIONS_DIR = fileURLToPath(new URL('../../migrations', import.meta.url));
 
 let pool: sql.ConnectionPool;
 
@@ -173,7 +174,8 @@ describe('deleteExpiredBaskets', () => {
       );
 
     const deleted = await deleteExpiredBaskets(pool, 7);
-    expect(deleted).toBeGreaterThanOrEqual(1);
+    expect(deleted).toContain(stale.address);
+    expect(deleted).not.toContain(fresh.address);
     expect(await findBasketByAddress(pool, stale.address)).toBeNull();
     expect(await findBasketByAddress(pool, fresh.address)).not.toBeNull();
   });

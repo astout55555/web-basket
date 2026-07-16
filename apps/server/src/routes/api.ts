@@ -11,10 +11,12 @@ import { z } from 'zod';
 import type { AppConfig } from '../config';
 import { createBasket, deleteBasket, findBasketByAddress } from '../db/baskets-repo';
 import { listRequests, toRequestRecord } from '../db/requests-repo';
+import type { SseRegistry } from '../sse/registry';
 
 export interface ApiRoutesOpts {
   pool: sql.ConnectionPool;
   config: AppConfig;
+  registry: SseRegistry;
 }
 
 export const addressParams = z.object({ address: basketAddressSchema });
@@ -25,7 +27,10 @@ export const addressParams = z.object({ address: basketAddressSchema });
  * to these routes (the sink must never be rate limited — dropping webhooks
  * defeats the product).
  */
-export const apiRoutes: FastifyPluginAsyncZod<ApiRoutesOpts> = async (app, { pool, config }) => {
+export const apiRoutes: FastifyPluginAsyncZod<ApiRoutesOpts> = async (
+  app,
+  { pool, config, registry },
+) => {
   await app.register(rateLimit, { global: false });
 
   app.post(
@@ -81,6 +86,8 @@ export const apiRoutes: FastifyPluginAsyncZod<ApiRoutesOpts> = async (app, { poo
           .code(404)
           .send({ statusCode: 404, error: 'Not Found', message: 'basket not found' });
       }
+      // Close any live dashboards on this basket so they don't stay "live".
+      registry.closeAddress(req.params.address);
       return reply.code(204).send(null);
     },
   );

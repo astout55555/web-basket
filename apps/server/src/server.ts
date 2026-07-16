@@ -29,6 +29,7 @@ const stopRetention = startRetentionSweep({
   pool,
   ttlDays: config.basketTtlDays,
   log: app.log,
+  registry: app.sseRegistry,
 });
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

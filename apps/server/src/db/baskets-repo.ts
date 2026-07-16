@@ -87,16 +87,19 @@ export async function deleteBasket(pool: sql.ConnectionPool, address: string): P
   return (result.rowsAffected[0] ?? 0) > 0;
 }
 
-/** TTL sweep: remove baskets idle for more than ttlDays. Returns count. */
+/** TTL sweep: remove baskets idle for more than ttlDays. Returns the deleted
+ * addresses (so callers can close their live SSE connections). */
 export async function deleteExpiredBaskets(
   pool: sql.ConnectionPool,
   ttlDays: number,
-): Promise<number> {
+): Promise<string[]> {
   const result = await pool
     .request()
     .input('ttlDays', sql.Int, ttlDays)
-    .query(
-      'DELETE FROM baskets WHERE last_activity_at < DATEADD(day, -@ttlDays, SYSUTCDATETIME())',
+    .query<{ address: string }>(
+      `DELETE FROM baskets
+       OUTPUT DELETED.address
+       WHERE last_activity_at < DATEADD(day, -@ttlDays, SYSUTCDATETIME())`,
     );
-  return result.rowsAffected[0] ?? 0;
+  return result.recordset.map((r) => r.address);
 }

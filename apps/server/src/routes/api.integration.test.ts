@@ -9,6 +9,7 @@ import {
   listRequestsResponseSchema,
 } from '@web-basket/shared';
 import sql from 'mssql';
+import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../app';
 import type { AppConfig } from '../config';
@@ -18,7 +19,7 @@ import { connectPool, devDbConfig } from '../db/pool';
 import { insertRequest } from '../db/requests-repo';
 
 const TEST_DB = 'webbasket_api_test';
-const MIGRATIONS_DIR = new URL('../../migrations', import.meta.url).pathname;
+const MIGRATIONS_DIR = fileURLToPath(new URL('../../migrations', import.meta.url));
 
 let pool: sql.ConnectionPool;
 let config: AppConfig;
@@ -149,5 +150,6 @@ describe('app basics', () => {
   it('still serves the health check', async () => {
     const res = await app.inject({ method: 'GET', url: '/healthz' });
     expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ status: 'ok' });
   });
 });

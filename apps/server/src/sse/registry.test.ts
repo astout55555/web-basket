@@ -108,6 +108,21 @@ describe('SseRegistry', () => {
     expect(b.written).toEqual([': keep-alive\n\n']);
   });
 
+  it('closeAddress ends and forgets only that address, leaving others intact', () => {
+    const registry = new SseRegistry();
+    const gone = fakeConn();
+    const kept = fakeConn();
+    registry.add('addr1', gone.conn);
+    registry.add('addr2', kept.conn);
+
+    registry.closeAddress('addr1');
+
+    expect(gone.isEnded()).toBe(true);
+    expect(registry.connectionCount('addr1')).toBe(0);
+    expect(kept.isEnded()).toBe(false);
+    expect(registry.connectionCount('addr2')).toBe(1);
+  });
+
   it('closeAll ends every connection and empties the registry', () => {
     const registry = new SseRegistry();
     const a = fakeConn();
