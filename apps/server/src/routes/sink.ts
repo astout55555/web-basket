@@ -5,7 +5,7 @@ import { basketAddressSchema, SSE_EVENT_REQUEST } from '@web-basket/shared';
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import type sql from 'mssql';
 import type { AppConfig } from '../config';
-import { findBasketByAddress } from '../db/baskets-repo';
+import { findBasketByAddress, isMissingBasketError } from '../db/baskets-repo';
 import { insertRequest, toRequestRecord } from '../db/requests-repo';
 import type { SseRegistry } from '../sse/registry';
 
@@ -100,22 +100,45 @@ export const sinkRoutes: FastifyPluginAsync<SinkRoutesOpts> = async (
           if (value !== undefined) headers[name] = value;
         }
 
-        const stored = await insertRequest(pool, {
-          basketId: basket.id,
-          method: req.method,
-          path: pathOnly,
-          query,
-          headers,
-          body: captured && captured.buffer.length > 0 ? captured.buffer : null,
-          bodySize: captured?.receivedBytes ?? 0,
-          truncated: captured?.truncated ?? false,
-          contentType: req.headers['content-type']?.slice(0, 256) ?? null,
-          remoteIp: req.ip ?? null,
-          requestCap: config.basketRequestCap,
-        });
+        // Cap every free-form string to its column width. method and remoteIp
+        // are attacker-controlled (a custom HTTP verb; a crafted
+        // X-Forwarded-For when TRUST_PROXY is on), and an over-length value
+        // would make the INSERT fail rather than truncate — the sink must
+        // still record the hit, so we cap here like path and content-type.
+        let stored;
+        try {
+          stored = await insertRequest(pool, {
+            basketId: basket.id,
+            method: req.method.slice(0, 16),
+            path: pathOnly,
+            query,
+            headers,
+            body: captured && captured.buffer.length > 0 ? captured.buffer : null,
+            bodySize: captured?.receivedBytes ?? 0,
+            truncated: captured?.truncated ?? false,
+            contentType: req.headers['content-type']?.slice(0, 256) ?? null,
+            remoteIp: req.ip?.slice(0, 64) ?? null,
+            requestCap: config.basketRequestCap,
+          });
+        } catch (err) {
+          // The basket can be deleted (owner or TTL sweep) between the lookup
+          // above and this insert; the foreign key then rejects the row. The
+          // basket is genuinely gone, so answer 404 like any unknown address
+          // rather than 500. Any other error (deadlock, transient) is a real
+          // 5xx and propagates to the sanitizing error handler.
+          if (isMissingBasketError(err)) {
+            return reply
+              .code(404)
+              .send({ statusCode: 404, error: 'Not Found', message: 'no such basket' });
+          }
+          throw err;
+        }
 
-        // DB write is durable; now push the record to live dashboards.
-        registry.broadcast(address, SSE_EVENT_REQUEST, toRequestRecord(stored));
+        // DB write is durable; now push the record to live dashboards. Skip
+        // building the (up to ~342 KB base64) record when nobody is watching.
+        if (registry.connectionCount(address) > 0) {
+          registry.broadcast(address, SSE_EVENT_REQUEST, toRequestRecord(stored));
+        }
 
         return reply.code(204).send();
       }

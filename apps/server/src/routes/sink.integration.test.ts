@@ -255,4 +255,25 @@ describe('remoteIp behind a reverse proxy', () => {
       await proxied.close();
     }
   });
+
+  it('caps an over-length X-Forwarded-For instead of failing the insert', async () => {
+    const proxied = buildApp({ config, pool }, { trustProxy: true });
+    await proxied.ready();
+    try {
+      const address = await createBasket();
+      // No comma, so @fastify/forwarded returns it verbatim as req.ip; it is
+      // longer than remote_ip NVARCHAR(64).
+      const res = await proxied.inject({
+        method: 'POST',
+        url: `/${address}`,
+        headers: { 'x-forwarded-for': 'x'.repeat(200) },
+        payload: 'a',
+      });
+      expect(res.statusCode).toBe(204);
+      const [rec] = await fetchRecords(address);
+      expect(rec!.remoteIp).toHaveLength(64);
+    } finally {
+      await proxied.close();
+    }
+  });
 });

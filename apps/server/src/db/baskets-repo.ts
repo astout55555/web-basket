@@ -31,6 +31,15 @@ function isUniqueViolation(err: unknown): boolean {
 }
 
 /**
+ * SQL Server error 547 = a constraint violation. On a request INSERT the only
+ * constraint that can fire is the foreign key to baskets, so this means the
+ * basket was deleted between lookup and insert.
+ */
+export function isMissingBasketError(err: unknown): boolean {
+  return err instanceof sql.RequestError && err.number === 547;
+}
+
+/**
  * Insert a basket with a fresh random address. Collisions are ~impossible
  * (71 bits of entropy) but cheap to handle: rely on the UNIQUE constraint and
  * retry with a new address rather than check-then-insert (which would race).

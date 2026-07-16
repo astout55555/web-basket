@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { SseConnection } from './registry';
 import { SseRegistry } from './registry';
 
-function fakeConn() {
+function fakeConn(alive = true) {
   const written: string[] = [];
   let ended = false;
   const conn: SseConnection = {
     write: (frame) => {
       written.push(frame);
+      return alive;
     },
     end: () => {
       ended = true;
@@ -76,6 +77,22 @@ describe('SseRegistry', () => {
     expect(delivered).toBe(1);
     expect(alive.written).toHaveLength(1);
     expect(registry.connectionCount('addr1')).toBe(1);
+  });
+
+  it('evicts a connection whose write returns false (destroyed socket)', () => {
+    const registry = new SseRegistry();
+    const dead = fakeConn(false);
+    const alive = fakeConn();
+    registry.add('addr1', dead.conn);
+    registry.add('addr1', alive.conn);
+
+    const delivered = registry.broadcast('addr1', 'request', { id: 1 });
+
+    expect(delivered).toBe(1);
+    expect(registry.connectionCount('addr1')).toBe(1);
+    // A second broadcast reaches only the survivor.
+    expect(registry.broadcast('addr1', 'request', { id: 2 })).toBe(1);
+    expect(alive.written).toHaveLength(2);
   });
 
   it('sends heartbeat comments to every connection on every address', () => {

@@ -7,7 +7,13 @@
 
 /** The two things the registry needs from a connection (reply.raw in prod). */
 export interface SseConnection {
-  write(frame: string): void;
+  /**
+   * Write a frame. Returns false if the connection is already dead — a
+   * destroyed socket's write() does NOT throw (it returns false or no-ops),
+   * so liveness must be reported, not inferred from a thrown error, or dead
+   * connections would never be evicted.
+   */
+  write(frame: string): boolean;
   end(): void;
 }
 
@@ -77,13 +83,18 @@ export class SseRegistry {
     let delivered = 0;
     const dead: SseConnection[] = [];
     for (const conn of set) {
+      let alive: boolean;
       try {
-        conn.write(frame);
-        delivered++;
+        alive = conn.write(frame);
       } catch {
-        dead.push(conn);
+        alive = false;
       }
+      if (alive) delivered++;
+      else dead.push(conn);
     }
+    // Evicting a half-open connection here (not just on the socket's 'close'
+    // event, which may never fire for a dropped-WiFi/sleeping client) is what
+    // keeps the registry from filling with zombies.
     for (const conn of dead) this.remove(address, conn);
     return delivered;
   }
