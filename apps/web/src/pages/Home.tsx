@@ -29,41 +29,49 @@ export function Home() {
 
   return (
     <section>
-      <div className="hero">
-        <h2>Inspect any HTTP request</h2>
-        <p>
+      <div className="card-surface p-8">
+        <h2 className="text-2xl font-bold tracking-tight">Inspect any HTTP request</h2>
+        <p className="mt-2 text-slate-600 dark:text-slate-400">
           Create a basket, point a webhook (or curl) at its URL, and watch requests appear live.
         </p>
-        <button className="primary" onClick={onCreate} disabled={creating}>
+        <button className="btn btn-primary mt-5" onClick={onCreate} disabled={creating}>
           {creating ? 'Creating…' : 'Create basket'}
         </button>
         {error !== null && (
-          <p role="alert" className="error">
+          <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
             {error}
           </p>
         )}
       </div>
 
-      <h3>Your baskets</h3>
+      <h3 className="mb-3 mt-10 text-lg font-semibold">Your baskets</h3>
       {baskets.length === 0 ? (
-        <p className="muted">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           No baskets yet — create one above. (This list lives in your browser only; anyone with a
           basket&rsquo;s URL can see it, and idle baskets expire after 7 days.)
         </p>
       ) : (
-        <ul className="basket-list">
+        <ul className="flex flex-col gap-3">
           {baskets.map((basket) => (
-            <li key={basket.address} className="basket-row">
+            <li
+              key={basket.address}
+              className="card-surface flex flex-wrap items-center justify-between gap-3 px-5 py-4"
+            >
               <div>
-                <Link to={dashboardPath(basket.address)} className="basket-link">
+                <Link
+                  to={dashboardPath(basket.address)}
+                  className="font-mono font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                >
                   {basket.address}
                 </Link>
-                <div className="muted small">
+                <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                   created {new Date(basket.createdAt).toLocaleString()}
                 </div>
               </div>
-              <div className="sink-url">
-                <code>{sinkUrl(basket.address)}</code>
+              <div className="flex flex-wrap items-center gap-2">
+                <code className="rounded-md border border-slate-200 bg-slate-100 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800/60">
+                  {sinkUrl(basket.address)}
+                </code>
                 <CopyButton text={sinkUrl(basket.address)} />
               </div>
             </li>

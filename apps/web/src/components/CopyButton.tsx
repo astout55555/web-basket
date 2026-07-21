@@ -24,7 +24,10 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
   }
 
   return (
-    <button className="ghost" onClick={onCopy}>
+    <button
+      className={`btn btn-ghost ${state === 'failed' ? 'text-red-600 dark:text-red-400' : ''}`}
+      onClick={onCopy}
+    >
       {state === 'copied' ? 'Copied!' : state === 'failed' ? 'Copy failed' : label}
     </button>
   );
